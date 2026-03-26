@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: 'Execute git commit with conventional commit message analysis, intelligent staging, and message generation. Use when user asks to commit changes, create a git commit, or mentions "/commit". Supports: (1) Auto-detecting type and scope from changes, (2) Generating conventional commit messages from diff, (3) Interactive commit with optional type/scope/description overrides, (4) Intelligent file staging for logical grouping'
+description: 'Execute git commit with conventional commit message analysis, intelligent staging, and message generation. Use when user asks to commit changes, create a git commit, or mentions "/commit". Supports: (1) Strict .gitignore verification, (2) Auto-detecting type and scope from changes, (3) Generating conventional commit messages from diff, (4) Interactive commit with optional type/scope/description overrides, (5) Intelligent file staging for logical grouping'
 license: MIT
 allowed-tools: Bash
 ---
@@ -9,7 +9,7 @@ allowed-tools: Bash
 
 ## Overview
 
-Create standardized, semantic git commits using the Conventional Commits specification. Analyze the actual diff to determine appropriate type, scope, and message.
+Create standardized, semantic git commits using the Conventional Commits specification. Analyze the actual diff to determine appropriate type, scope, and message. Contains built-in protections for preventing bad data from entering the repository.
 
 ## Conventional Commit Format
 
@@ -51,7 +51,14 @@ BREAKING CHANGE: `extends` key behavior changed
 
 ## Workflow
 
-### 1. Analyze Diff
+### 1. Strict `.gitignore` Verification
+
+Before doing *anything* git-related (like staging, adding, or committing), YOU MUST strictly verify that the `.gitignore` file correctly handles all files in the current project condition.
+- Run `git status -s` or `git ls-files --others --exclude-standard` to see untracked files.
+- If there are datasets, build artifacts, virtual environments, large objects, cache directories, or secrets that should not be tracked but are showing up as untracked, YOU MUST STOP and update the `.gitignore` file.
+- Do not proceed to staging until you are absolutely certain that no extraneous files will be accidentally committed.
+
+### 2. Analyze Diff
 
 ```bash
 # If files are staged, use staged diff
@@ -64,7 +71,7 @@ git diff
 git status --porcelain
 ```
 
-### 2. Stage Files (if needed)
+### 3. Stage Files (if needed)
 
 If nothing is staged or you want to group changes differently:
 
@@ -82,7 +89,7 @@ git add -p
 
 **Never commit secrets** (.env, credentials.json, private keys).
 
-### 3. Generate Commit Message
+### 4. Generate Commit Message
 
 Analyze the diff to determine:
 
@@ -90,7 +97,7 @@ Analyze the diff to determine:
 - **Scope**: What area/module is affected?
 - **Description**: One-line summary of what changed (present tense, imperative mood, <72 chars)
 
-### 4. Execute Commit
+### 5. Execute Commit
 
 ```bash
 # Single line
