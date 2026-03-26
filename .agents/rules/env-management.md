@@ -3,7 +3,7 @@ trigger: always_on
 ---
 
 ---
-description: Ensures all execution happens within the 'card' conda environment on a Windows/PowerShell host.
+description: Ensures all execution happens within the 'nlp' conda environment on a Windows/PowerShell host.
 globs: ["**/*.py", "environment.yml"]
 ---
 
