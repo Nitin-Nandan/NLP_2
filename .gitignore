@@ -18,3 +18,4 @@ venv.bak/
 # Project specifics
 data/
 *.pt
+results/
