@@ -29,3 +29,8 @@ description: Core operational directives for modularity, proactive skill generat
   1. **Phase Completion:** A project phase is completely finished.
   2. **Architectural Shifts:** A core architectural change is required (e.g., re-initializing BERT embeddings).
   3. **High-Compute Tasks:** Initiating a training loop or executing a script that is expected to take longer than 2 minutes.
+      * **Execution Protocol:** Do NOT execute the script yourself in the background. You must provide the exact terminal command to the user (e.g., `python src/train.py`), instruct the user to manually run it in their own terminal, and wait for the user to report back the final results before proceeding.
+
+## 5. No Destructive Overwrites
+* **Directive:** Never overwrite executable scripts from previous experiments or phases. 
+* **Action:** When initiating a new experiment or phase, agents MUST create a new, distinct execution script (e.g., `train_[experiment].py`) or use parameterized CLI arguments to retain historical codebase states.
