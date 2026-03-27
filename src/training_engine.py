@@ -1,14 +1,5 @@
 import torch
-import time
-import os
 import sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from transformers import get_linear_schedule_with_warmup, BertTokenizerFast
-from torch.optim import AdamW
-from src.data_loader import DataLoaderFactory
-from src.model_utils import CoreModelManager
 
 def calculate_metrics(predictions, true_labels):
     acc = sum([p == t for p, t in zip(predictions, true_labels)]) / len(true_labels)
@@ -48,12 +39,17 @@ def train_epoch(model, dataloader, optimizer, scheduler, device, scaler):
             
     return total_loss / len(dataloader)
 
-def evaluate(model, dataloader, device):
+def evaluate(model, dataloader, device, dynamic_dropout=False):
     model.eval()
     predictions = []
     true_labels = []
     device_type = 'cuda' if 'cuda' in str(device) else 'cpu'
     
+    original_dropout = None
+    if dynamic_dropout and hasattr(dataloader.dataset.tokenizer, 'backend_tokenizer'):
+        original_dropout = dataloader.dataset.tokenizer.backend_tokenizer.model.dropout
+        dataloader.dataset.tokenizer.backend_tokenizer.model.dropout = None
+        
     with torch.no_grad():
         for step, batch in enumerate(dataloader):
             input_ids = batch['input_ids'].to(device)
@@ -66,50 +62,24 @@ def evaluate(model, dataloader, device):
             predictions.extend(preds.cpu().numpy())
             true_labels.extend(labels.cpu().numpy())
             
+    if dynamic_dropout and original_dropout is not None:
+        dataloader.dataset.tokenizer.backend_tokenizer.model.dropout = original_dropout
+            
     acc, f1 = calculate_metrics(predictions, true_labels)
     return acc, f1
 
-if __name__ == "__main__":
-    os.makedirs('results', exist_ok=True)
-    class DualLogger:
-        def __init__(self, filename):
-            self.terminal = sys.stdout
-            self.log = open(filename, "a", encoding='utf-8')
-        def write(self, message):
-            self.terminal.write(message)
-            self.log.write(message)
-        def flush(self):
-            self.terminal.flush()
-            self.log.flush()
-        def isatty(self):
-            return hasattr(self.terminal, 'isatty') and self.terminal.isatty()
-
-    sys.stdout = DualLogger(os.path.join("results", "train_output.txt"))
-    print("Initiating Phase 2 Baseline Execution via ML-Scientist")
-    
-    tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
-    factory = DataLoaderFactory(dataset_name="sst2")
-    train_loader, val_loader = factory.get_dataloaders(tokenizer, batch_size=32, max_length=128)
-    
-    manager = CoreModelManager(num_labels=2)
-    device = manager.device
-    model = manager.model
-    params_count = manager.print_parameter_count()
-    
-    optimizer = AdamW(model.parameters(), lr=2e-5, eps=1e-8)
-    EPOCHS = 3
-    total_steps = len(train_loader) * EPOCHS
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps*0.1), num_training_steps=total_steps)
-    scaler = torch.amp.GradScaler('cuda' if 'cuda' in str(device) else 'cpu', enabled=('cuda' in str(device)))
-    
-    start_time = time.time()
-    for epoch in range(EPOCHS):
-        print(f"\n--- Epoch {epoch+1}/{EPOCHS} ---")
-        train_loss = train_epoch(model, train_loader, optimizer, scheduler, device, scaler)
-        print(f"Epoch {epoch+1} Training Loss: {train_loss:.4f}")
+class DualLogger:
+    def __init__(self, filename):
+        self.terminal = sys.stdout
+        self.log = open(filename, "a", encoding='utf-8')
         
-    print("Evaluating Baseline-WordPiece Model...")
-    val_acc, val_f1 = evaluate(model, val_loader, device)
-    total_time = time.time() - start_time
-    print(f"Baseline Training complete! Acc: {val_acc:.4f} | F1: {val_f1:.4f} | Time: {total_time:.2f}s")
-    print(f"BASELINE_FINAL_METRICS|{val_acc:.4f}|{val_f1:.4f}|{total_time:.2f}|{params_count}")
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+        
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+        
+    def isatty(self):
+        return hasattr(self.terminal, 'isatty') and self.terminal.isatty()

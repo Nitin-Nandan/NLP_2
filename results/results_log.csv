@@ -1,0 +1,6 @@
+model_name,accuracy,f1_score,train_time,parameters
+Baseline-WordPiece,0.9255,0.9274,1377.33,109483778
+BPE-Tokenizer,0.7959,0.8035,1331.26,97562882
+Char-Tokenizer,0.5528,0.6293,2432.12,86097410
+Hybrid-Tokenizer,0.7867,0.7974,1292.53,89882882
+Dynamic-Tokenizer,0.8028,0.813,1311.13,93722882
